@@ -23,9 +23,6 @@ import LinearAlgebra: norm
 # ╔═╡ abb35e43-c186-4066-9e74-fd06b4b35f45
 TableOfContents()
 
-# ╔═╡ 0b6eff96-63e2-41fb-80d2-25b86aaa14be
-md"## ⚠ WARNING: this document is still under construction. Code is 90% functional."
-
 # ╔═╡ 2977679a-a1c4-48ac-a009-7f74516babce
 md"# 🧾 Background
 
@@ -61,7 +58,7 @@ md"Let's implement copy for this new struct `line` so that we can perform copy o
 Base.copy(s::Line) = Line(s.rotation, s.length, copy(s.mirror))
 
 # ╔═╡ 97b235f9-2b55-451d-b6c0-e40de4e91c4d
-md"To make our code a bit nicer to write, lets write a simple macro to create line objects. Instead of `Line(30, 2, [1,0])` one can write `@Line 30 2 twist`"
+md"To make our code a bit nicer to write, lets write a simple macro to create line objects. Instead of `Line(30, 2, [1,0])` one can write `@Line 30 2 twist`. For more details on this notation and interpretation, see [the following section of the online resource](https://archive.org/details/BrainfillingCurves-AFractalBestiary/page/n47/mode/2up?view=theater)"
 
 # ╔═╡ 33890185-0f3c-4460-a37c-41e5ffbf5c1f
 macro Line(angle, length, args...)
@@ -123,17 +120,23 @@ And of course a number of iterations must be provided.
 
 # ╔═╡ fb205fe8-ad82-4c9a-8312-8d8b8554ea46
 function iter_curve(out::Vector{Line}, sourceline::Line, template::LineTemplate, depth::Int64)	
-	for templateLine in template.templateLines	
-		line = copy(templateLine)  # dont want to change original copy
+	# if the sourceline is reversed, then we must go through template in reverse
+	templatelist =(sourceline.mirror[1] ? reverse(template.templateLines) : template.templateLines)
+	for templateLine in templatelist	
+		line = copy(templateLine)  # dont want to affect original template
 		scalefac = line.length/template.span		
-		#println("scalefac: $(scalefac) and iteration scale: $(scale)")
 		line.length = scalefac * sourceline.length
-		line.rotation = sourceline.rotation +
-		(sourceline.mirror[2] ? -line.rotation+template.rotation : line.rotation-template.rotation)	
-		#println(sourceline.mirror)
+		
+		line.rotation -= template.rotation
 		if sourceline.mirror[2]
 			line.mirror[2] = !line.mirror[2]
+			line.rotation *= -1
 		end
+		if sourceline.mirror[1]
+			line.mirror[1] = !line.mirror[1]  
+			line.rotation *= -1
+		end
+		line.rotation += sourceline.rotation
 		
 		if depth > 0			
 			iter_curve(out, line, template, depth-1)
@@ -174,6 +177,21 @@ begin
 	backgroundcolor = "EDF5E1"
 end;
 
+# ╔═╡ ee0bc1fe-ca91-4409-ac1d-bdda754f4a65
+md"We can define any group of valid SVG elements to make up our 'line' used for visualisation. Note that it would be good to have it go from `0 < x < 1` and have it look somewhat line-like"
+
+# ╔═╡ 2bae6d42-7506-43ca-9947-304a5436efe0
+lineshape = """
+<line x1="0.08" y1="0" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
+<line x1="0.8" y1="0.2" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>""";
+
+# ╔═╡ e0429a1b-b96c-4f03-8e69-1efc2c87054a
+md">But you can also go crazy any make a line out of e.g. emojis 😜. Replace `lineshape` with `lineshapeEmoji` in the `Base.show` function below to try it."
+
+# ╔═╡ bc8f2c5a-ba8d-42a3-8d43-21c6a3b6a0a9
+lineshapeEmoji = """
+<text text-anchor="middle" alignment-baseline="middle"font-size="0.03em" transform="translate(0.45,0.05) rotate(45)">💉</text>""";
+
 # ╔═╡ c62a37c7-9b4d-4c04-bc58-140ad69c94dd
 md"The method below is not elegant code, but it gets the job done. You can dig around a bit in the method below if you want more fine grained control over the plots (change shapes, sizes etc)
 
@@ -187,37 +205,18 @@ begin
 		<span class="SFC-fig" style="position:relative">
 		<button onclick="const svg = this.nextElementSibling.outerHTML; const blob = new Blob([svg.toString()]); const element = document.createElement('a'); element.download = 'space-filling-curve.svg'; element.href = window.URL.createObjectURL(blob); element.click(); element.remove()"	
 		type="button"> Download SVG </button>		
-		<svg viewBox="$(minX-width/5) $(minY-height/5) $(width*1.4) $(height*1.4)" style="background:#$(backgroundcolor);transform:scaleY(-1)" xmlns="http://www.w3.org/2000/svg"> 
+		<svg viewBox="$(minX-0.3) $(minY-0.3) $(width+0.6) $(height+0.6)" style="background:#$(backgroundcolor);transform:scaleY(-1)" xmlns="http://www.w3.org/2000/svg"> 
 		<defs>
-		<g id="curve-line">
-			<line x1="0.08" y1="0" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
-			<line x1="0.8" y1="0.2" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
-			<text text-anchor="middle" alignment-baseline="middle" x="0.5" y="0" font-size=".02em">😂</text>
-		</g>
-		<g id="curve-line-mirrored">
-			<line x1="0.08" y1="0" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
-			<line x1="0.8" y1="-0.2" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
-		<text text-anchor="middle" alignment-baseline="middle" x="0.5" y="0" font-size=".02em">😂</text>
-		</g>
-		<g id="curve-line-flipped">
-			<line x1="0.08" y1="0" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
-			<line x1="0.2" y1="0.2" x2="0.08" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
-		<text text-anchor="middle" alignment-baseline="middle" x="0.5" y="0" font-size=".02em">😂</text>
-		</g>
-		<g id="curve-line-mirrored-flipped">
-			<line x1="0.08" y1="0" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
-			<line x1="0.2" y1="-0.2" x2="0.08" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
-		</g>
+			<g id="curve-line"> $(lineshape) </g>
 		</defs>
 		<circle cx="0" cy="0" r="0.03" fill="black" opacity="0.3"/>
 		"""
-		lastcoord = [0,0]
-		
+		lastcoord = [0,0]		
 		for line in obj
 			# add to svg
-			orientation = line.mirror[2] ? "curve-line-mirrored" : "curve-line" 
-			orientation *= line.mirror[1] ? "-flipped" : ""
-			svg *= """<use href="#$(orientation)" transform="translate($(lastcoord[1]),$(lastcoord[2])) rotate($(line.rotation)) scale($(line.length)) "/>
+			scalefacX = line.mirror[1] ? -line.length : line.length
+			scalefacY = line.mirror[2] ? -line.length : line.length
+			svg *= """<use href="#curve-line" transform="translate($(lastcoord[1]),$(lastcoord[2])) rotate($(line.rotation)) $(line.mirror[1] ? "translate(1,0)" : "") scale($(scalefacX),$(scalefacY)) "/>
 			<circle cx="$(lastcoord[1])" cy="$(lastcoord[2])" r="$(line.length/40)" fill="#$(pivotcolor)"/>"""
 			
 			lastcoord= lastcoord + [cos(deg2rad(line.rotation)), sin(deg2rad(line.rotation))]*line.length
@@ -250,15 +249,15 @@ Changing the mirror properties of the segments will change the resulting pattern
 
 # ╔═╡ 11bf8396-aeb5-4dec-a4e2-ff26a2912297
 rightangle = LineTemplate([
-		@Line 0 1
-		@Line 90 1 twist
+		@Line 0 1 twist
+		@Line 90 1 
 ])
 
 # ╔═╡ 25ab6b0b-33fe-437c-bcf0-cdbac6816a9a
-md"Try playing with the mirror values to see how the curve changes!"
+md"Try playing with the `twist` and `reverse` values in the template to see how the curve changes!"
 
 # ╔═╡ 5a045687-2a71-44d0-995b-222950fd203d
-@bind rightangleorder Slider(0:10, default=8, show_value=true)
+@bind rightangleorder Slider(0:10, default=9, show_value=true)
 
 # ╔═╡ e655ca64-f509-459c-b8bf-31811a622425
 computeSFC(rightangle.templateLines, rightangle, rightangleorder)
@@ -300,15 +299,15 @@ This is a pretty nice curve, and requires the use of orientations of our `line` 
 
 # ╔═╡ 85cad6a9-2b14-4bed-9c15-81145a96c3ed
 holidayTree = LineTemplate([
-		@Line 30 sqrt(3) twist
-		@Line 120 1 
+		@Line 30 sqrt(3) twist 
+		@Line 120 1  
 		@Line 0 1 
-		@Line -120 1
+		@Line -120 1 
 		@Line -30 sqrt(3) twist 
 ])
 
 # ╔═╡ 796a211a-bb0d-4f54-a1f1-18d94ffa9439
-@bind holidayorder Slider(0:5, default=3, show_value=true)
+@bind holidayorder Slider(0:5, default=4, show_value=true)
 
 # ╔═╡ 77ba6866-7a8c-4451-8705-c9ccbddecccd
 computeSFC(holidayTree.templateLines, holidayTree, holidayorder)
@@ -533,7 +532,6 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═63def3e5-bb09-4b9f-8eff-5f71bceaf2cd
 # ╠═fc59a3b3-4343-46cf-bbec-858e049aa32b
 # ╠═abb35e43-c186-4066-9e74-fd06b4b35f45
-# ╟─0b6eff96-63e2-41fb-80d2-25b86aaa14be
 # ╟─2977679a-a1c4-48ac-a009-7f74516babce
 # ╟─fcdb08f3-f219-423d-912e-4085eeff45da
 # ╠═17ab22e0-add4-455b-8896-0184f6fe2eec
@@ -551,6 +549,10 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═fb205fe8-ad82-4c9a-8312-8d8b8554ea46
 # ╟─14f161e7-c0b4-48d2-a37c-85ffd5c35dd7
 # ╠═f166b2db-3279-4d63-98fd-cc87cf02c0d5
+# ╟─ee0bc1fe-ca91-4409-ac1d-bdda754f4a65
+# ╠═2bae6d42-7506-43ca-9947-304a5436efe0
+# ╟─e0429a1b-b96c-4f03-8e69-1efc2c87054a
+# ╠═bc8f2c5a-ba8d-42a3-8d43-21c6a3b6a0a9
 # ╟─c62a37c7-9b4d-4c04-bc58-140ad69c94dd
 # ╠═acaf5695-f92b-485f-8ed8-461adab36c3e
 # ╟─391a4b81-4ca7-4df4-add6-d91094224cc8
