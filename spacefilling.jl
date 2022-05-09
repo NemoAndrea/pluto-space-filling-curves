@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.3
+# v0.18.4
 
 using Markdown
 using InteractiveUtils
@@ -39,7 +39,7 @@ Ventrella, Jeffrey. Brainfilling curves-a fractal bestiary. Lulu. com, 2012.
 
 as a good starting point for further reading. A great deal of inspiration for this notebook was drawn from that excellent freely avaible resource. You can [read it online here](http://www.brainfillingcurves.com/)
 
-The goal of this notebook is to show some runnable code as well as to show off `Pluto.jl` notebooks which I enjoy using a great deal.
+The goal of this notebook is to show some runnable code as well as to show off `Pluto.jl` notebooks which are always enjoyable to work with.
 "
 
 # ╔═╡ fcdb08f3-f219-423d-912e-4085eeff45da
@@ -59,6 +59,19 @@ md"Let's implement copy for this new struct `line` so that we can perform copy o
 
 # ╔═╡ 11d2de71-790a-4397-a0e1-ad1ebc40b82b
 Base.copy(s::Line) = Line(s.rotation, s.length, copy(s.mirror))
+
+# ╔═╡ 97b235f9-2b55-451d-b6c0-e40de4e91c4d
+md"To make our code a bit nicer to write, lets write a simple macro to create line objects. Instead of `Line(30, 2, [1,0])` one can write `@Line 30 2 twist`"
+
+# ╔═╡ 33890185-0f3c-4460-a37c-41e5ffbf5c1f
+macro Line(angle, length, args...)
+	mirror = [false,false]
+	for arg in args
+		if arg==:twist mirror[2]=true  
+		elseif arg==:reverse mirror[1]=true end		
+	end
+	return Line(eval(angle), eval(length), mirror)
+end;
 
 # ╔═╡ 0f80fc16-e457-4d48-8116-ab8e854a6183
 md"Let's also create a struct for a 'template' that will be used for each iteration. More or less a glorified list of `line` structs"
@@ -162,39 +175,40 @@ begin
 end;
 
 # ╔═╡ c62a37c7-9b4d-4c04-bc58-140ad69c94dd
-md"It's not elegant code, but it gets the job done. You can dig around a bit in the method below if you want more fine grained control over the plots (change shapes, sizes etc)
+md"The method below is not elegant code, but it gets the job done. You can dig around a bit in the method below if you want more fine grained control over the plots (change shapes, sizes etc)
 
-We add a simple ugly button that appears on hover that will download the SVG file"
+We add a simple ugly button that appears on hover that will download the SVG file. Then you can open this in your browser to get a fullscreen view or import it to a vector graphics editor.."
 
 # ╔═╡ acaf5695-f92b-485f-8ed8-461adab36c3e
 begin
-	import Base: show
-	function show(io::IO, m::MIME"text/html", obj::Vector{Line})
+	function Base.show(io::IO, ::MIME"text/html", obj::Vector{Line})
 		(minX, minY, width, height) = computeBBox(obj)
 		svg = """
 		<span class="SFC-fig" style="position:relative">
-		<button onclick="const svg = this.nextElementSibling.outerHTML; const blob = new Blob([svg.toString()]); const element = document.createElement('a'); element.download = 'w3c.svg'; element.href = window.URL.createObjectURL(blob); element.click(); element.remove()"	
-		type="button">Download SVG</button>		
-		<svg viewBox="$(minX-width/5) $(minY-height/5) $(width*1.4) $(height*1.4)" style="background:#$(backgroundcolor);transform:scaleY(-1)">
+		<button onclick="const svg = this.nextElementSibling.outerHTML; const blob = new Blob([svg.toString()]); const element = document.createElement('a'); element.download = 'space-filling-curve.svg'; element.href = window.URL.createObjectURL(blob); element.click(); element.remove()"	
+		type="button"> Download SVG </button>		
+		<svg viewBox="$(minX-width/5) $(minY-height/5) $(width*1.4) $(height*1.4)" style="background:#$(backgroundcolor);transform:scaleY(-1)" xmlns="http://www.w3.org/2000/svg"> 
 		<defs>
 		<g id="curve-line">
 			<line x1="0.08" y1="0" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
 			<line x1="0.8" y1="0.2" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
+			<text text-anchor="middle" alignment-baseline="middle" x="0.5" y="0" font-size=".02em">😂</text>
 		</g>
 		<g id="curve-line-mirrored">
 			<line x1="0.08" y1="0" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
 			<line x1="0.8" y1="-0.2" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
+		<text text-anchor="middle" alignment-baseline="middle" x="0.5" y="0" font-size=".02em">😂</text>
 		</g>
 		<g id="curve-line-flipped">
 			<line x1="0.08" y1="0" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
 			<line x1="0.2" y1="0.2" x2="0.08" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
+		<text text-anchor="middle" alignment-baseline="middle" x="0.5" y="0" font-size=".02em">😂</text>
 		</g>
 		<g id="curve-line-mirrored-flipped">
 			<line x1="0.08" y1="0" x2="0.92" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
 			<line x1="0.2" y1="-0.2" x2="0.08" y2="0" stroke="#$(linecolor)" stroke-width="0.1" stroke-linecap="round"/>
 		</g>
 		</defs>
-		<text x="10" y="10">Nr lines = $(length(obj))</text>
 		<circle cx="0" cy="0" r="0.03" fill="black" opacity="0.3"/>
 		"""
 		lastcoord = [0,0]
@@ -203,7 +217,7 @@ begin
 			# add to svg
 			orientation = line.mirror[2] ? "curve-line-mirrored" : "curve-line" 
 			orientation *= line.mirror[1] ? "-flipped" : ""
-			svg *= """<use xlink:href="#$(orientation)" transform="translate($(lastcoord[1]),$(lastcoord[2])) rotate($(line.rotation)) scale($(line.length)) "/>
+			svg *= """<use href="#$(orientation)" transform="translate($(lastcoord[1]),$(lastcoord[2])) rotate($(line.rotation)) scale($(line.length)) "/>
 			<circle cx="$(lastcoord[1])" cy="$(lastcoord[2])" r="$(line.length/40)" fill="#$(pivotcolor)"/>"""
 			
 			lastcoord= lastcoord + [cos(deg2rad(line.rotation)), sin(deg2rad(line.rotation))]*line.length
@@ -218,6 +232,12 @@ begin
 	end
 end;
 
+# ╔═╡ 391a4b81-4ca7-4df4-add6-d91094224cc8
+md"We ensure that our `LineTemplate` struct gets displayed similar to Vector{Line}"
+
+# ╔═╡ 3dadeb2e-16ca-43b3-a3d9-035f58911d4c
+Base.show(io::IO, m::MIME"text/html", obj::LineTemplate) = Base.show(io, m,obj.templateLines)
+
 # ╔═╡ f4be52c2-e6a1-4c5e-89e2-83361abd5262
 md"# 🚀 Let's draw some curves!"
 
@@ -230,15 +250,12 @@ Changing the mirror properties of the segments will change the resulting pattern
 
 # ╔═╡ 11bf8396-aeb5-4dec-a4e2-ff26a2912297
 rightangle = LineTemplate([
-		Line(0, 1, [false,false]),
-		Line(90, 1, [false,true])
-]);
+		@Line 0 1
+		@Line 90 1 twist
+])
 
 # ╔═╡ 25ab6b0b-33fe-437c-bcf0-cdbac6816a9a
 md"Try playing with the mirror values to see how the curve changes!"
-
-# ╔═╡ ca3fc5d4-0b3d-4db4-93b2-35b199d0c9e4
-rightangle.templateLines
 
 # ╔═╡ 5a045687-2a71-44d0-995b-222950fd203d
 @bind rightangleorder Slider(0:10, default=8, show_value=true)
@@ -253,20 +270,14 @@ Let's continue with a classic: the Koch Curve"
 
 # ╔═╡ 0beafe56-a4c6-4ade-8954-43998ba5c2a0
 kochcurve = LineTemplate([
-		Line(0, 1, [false,false]),
-		Line(60, 1, [false,false]),
-		Line(-60, 1, [false,false]),
-		Line(0, 1, [false,false])
-]);
-
-# ╔═╡ 09908a3e-eab9-464e-8d5a-cacec72f6222
-md"Let's view it"
-
-# ╔═╡ 4d5ec5ac-7cf6-44b9-997f-24422737377a
-kochcurve.templateLines
+		@Line 0 1
+		@Line 60 1
+		@Line -60 1
+		@Line 0 1
+])
 
 # ╔═╡ dcd0f0c7-9a32-46c7-b932-567dcbde6e3e
-@bind kochorder Slider(0:5, default=3, show_value=true)
+@bind kochorder Slider(0:5, default=4, show_value=true)
 
 # ╔═╡ 279b3826-c78b-4497-945b-5e3f767f854c
 computeSFC(kochcurve.templateLines, kochcurve, kochorder)
@@ -276,10 +287,10 @@ md"We are not required to use the template as the base curve at all, so we can t
 
 # ╔═╡ 2bff28ae-87e8-4bd9-9fa6-e6e143872c3f
 computeSFC([
-		Line(0, 1, [false,false]),
-		Line(90, 1, [false,false]),
-		Line(180, 1, [false,false]),
-		Line(270, 1, [false,false])
+		@Line 0 1
+		@Line 90 1
+		@Line 180 1
+		@Line 270 1 
 ], kochcurve, kochorder)
 
 # ╔═╡ 9c37f943-e7a2-4ad8-8916-c00938ffdbed
@@ -289,26 +300,18 @@ This is a pretty nice curve, and requires the use of orientations of our `line` 
 
 # ╔═╡ 85cad6a9-2b14-4bed-9c15-81145a96c3ed
 holidayTree = LineTemplate([
-		Line(30, sqrt(3), [false,true]),
-		Line(120, 1, [false,false]),
-		Line(0, 1, [false,false]),
-		Line(-120, 1, [false,false]),
-		Line(-30, sqrt(3), [false,true])
-]);
-
-# ╔═╡ 15982af5-2119-4fc8-8d8a-44e6ca9e684b
-holidayTree.templateLines
+		@Line 30 sqrt(3) twist
+		@Line 120 1 
+		@Line 0 1 
+		@Line -120 1
+		@Line -30 sqrt(3) twist 
+])
 
 # ╔═╡ 796a211a-bb0d-4f54-a1f1-18d94ffa9439
 @bind holidayorder Slider(0:5, default=3, show_value=true)
 
 # ╔═╡ 77ba6866-7a8c-4451-8705-c9ccbddecccd
 computeSFC(holidayTree.templateLines, holidayTree, holidayorder)
-
-# ╔═╡ a7ee5cde-5245-4f45-a890-81336bb62eb1
-function removeit(apple::Float64, pear::Bool)
-	println(apple, pear)
-end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -536,6 +539,8 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═17ab22e0-add4-455b-8896-0184f6fe2eec
 # ╟─9aad0ae4-8901-42bf-bb1c-8e92129b64c8
 # ╠═11d2de71-790a-4397-a0e1-ad1ebc40b82b
+# ╟─97b235f9-2b55-451d-b6c0-e40de4e91c4d
+# ╠═33890185-0f3c-4460-a37c-41e5ffbf5c1f
 # ╟─0f80fc16-e457-4d48-8116-ab8e854a6183
 # ╠═ca1776ad-3bc0-4a03-ac74-526e1f1e0950
 # ╟─c86b7a75-4448-4313-a962-037bef8bc033
@@ -548,26 +553,23 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╠═f166b2db-3279-4d63-98fd-cc87cf02c0d5
 # ╟─c62a37c7-9b4d-4c04-bc58-140ad69c94dd
 # ╠═acaf5695-f92b-485f-8ed8-461adab36c3e
+# ╟─391a4b81-4ca7-4df4-add6-d91094224cc8
+# ╠═3dadeb2e-16ca-43b3-a3d9-035f58911d4c
 # ╟─f4be52c2-e6a1-4c5e-89e2-83361abd5262
 # ╟─ad207712-1781-45d8-b462-3025a6c4baa8
 # ╠═11bf8396-aeb5-4dec-a4e2-ff26a2912297
 # ╟─25ab6b0b-33fe-437c-bcf0-cdbac6816a9a
-# ╠═ca3fc5d4-0b3d-4db4-93b2-35b199d0c9e4
 # ╠═5a045687-2a71-44d0-995b-222950fd203d
 # ╠═e655ca64-f509-459c-b8bf-31811a622425
 # ╟─3a47428b-d5f7-4540-83f8-139c6b7359f3
 # ╠═0beafe56-a4c6-4ade-8954-43998ba5c2a0
-# ╟─09908a3e-eab9-464e-8d5a-cacec72f6222
-# ╠═4d5ec5ac-7cf6-44b9-997f-24422737377a
 # ╠═279b3826-c78b-4497-945b-5e3f767f854c
 # ╠═dcd0f0c7-9a32-46c7-b932-567dcbde6e3e
 # ╟─90375842-b83a-4062-8fee-7ba768d6ca9e
 # ╠═2bff28ae-87e8-4bd9-9fa6-e6e143872c3f
 # ╟─9c37f943-e7a2-4ad8-8916-c00938ffdbed
 # ╠═85cad6a9-2b14-4bed-9c15-81145a96c3ed
-# ╠═15982af5-2119-4fc8-8d8a-44e6ca9e684b
 # ╠═77ba6866-7a8c-4451-8705-c9ccbddecccd
 # ╠═796a211a-bb0d-4f54-a1f1-18d94ffa9439
-# ╠═a7ee5cde-5245-4f45-a890-81336bb62eb1
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
